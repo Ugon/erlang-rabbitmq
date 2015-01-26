@@ -23,9 +23,10 @@ init(PID, Number) ->
 
   %%Queue declare
   amqp_channel:call(Channel, #'queue.declare'{queue = <<"work">>}),
+  amqp_channel:call(Channel, #'basic.qos'{prefetch_count = 1}),
 
   %%Subscribe and receive confirmation
-  amqp_channel:subscribe(Channel, #'basic.consume'{queue = <<"work">>, no_ack = true}, self()),
+  amqp_channel:subscribe(Channel, #'basic.consume'{queue = <<"work">>}, self()),
   receive
     #'basic.consume_ok'{} -> ok
   end,
@@ -42,10 +43,16 @@ init(PID, Number) ->
 
 loop(Channel, PID, Number) ->
   receive
-    stop -> ok;
-    {#'basic.deliver'{}, #amqp_msg{payload = Body}} ->
+    %%Receive message
+    {#'basic.deliver'{delivery_tag = Tag}, #amqp_msg{payload = Body}} ->
+
+      %%Precess message
       PID ! io_lib:format("[SUBSCRIBER ~p] Received: ~p~n", [Number, Body]),
       timer:sleep(1500),
+
+      %%Send acknowledgement
+      amqp_channel:cast(Channel, #'basic.ack'{delivery_tag = Tag}),
+
       loop(Channel, PID, Number)
   after 2000 -> ok
   end.

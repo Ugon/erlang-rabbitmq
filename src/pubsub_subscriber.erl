@@ -22,15 +22,14 @@ init(PID, Number) ->
   {ok, Channel} = amqp_connection:open_channel(Connection),
 
   %%Exchange declare
-  amqp_channel:call(Channel,
-    #'exchange.declare'{exchange = <<"pubsub_exchange">>, type = <<"fanout">>}),
+  amqp_channel:call(Channel, #'exchange.declare'{exchange = <<"pubsub_exchange">>, type = <<"fanout">>}),
 
   %%Queue declare and bind
   #'queue.declare_ok'{queue = Queue} = amqp_channel:call(Channel, #'queue.declare'{exclusive = true}),
   amqp_channel:call(Channel, #'queue.bind'{exchange = <<"pubsub_exchange">>, queue = Queue}),
 
   %%Subscribe and receive confirmation
-  amqp_channel:subscribe(Channel, #'basic.consume'{queue = Queue}, self()),
+  amqp_channel:subscribe(Channel, #'basic.consume'{queue = Queue, no_ack = true}, self()),
   receive
     #'basic.consume_ok'{} -> ok
   end,
@@ -47,9 +46,13 @@ init(PID, Number) ->
 
 loop(Channel, PID, Number) ->
   receive
+  %%Receive message
     {#'basic.deliver'{}, #amqp_msg{payload = Body}} ->
+
+      %%Precess message
       PID ! io_lib:format("[SUBSCRIBER ~p] Received: ~p~n", [Number, Body]),
       timer:sleep(200 * Number * Number),
+
       loop(Channel, PID, Number)
   after 2000 -> ok
   end.

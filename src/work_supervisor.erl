@@ -25,8 +25,8 @@ init(PID) ->
 
 loop() ->
   receive
-    stop -> ok;
-    A -> io:format("~s", [A]),
+    A ->
+      io:format("~s", [A]),
       loop()
   after 3000 -> ok
   end.

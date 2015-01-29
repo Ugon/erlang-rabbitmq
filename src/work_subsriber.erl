@@ -48,7 +48,7 @@ loop(Channel, PID, Number) ->
 
       %%Precess message
       PID ! io_lib:format("[SUBSCRIBER ~p] Received: ~p~n", [Number, Body]),
-      timer:sleep(1500),
+      timer:sleep(Number * 400 + 1000),
 
       %%Send acknowledgement
       amqp_channel:cast(Channel, #'basic.ack'{delivery_tag = Tag}),
